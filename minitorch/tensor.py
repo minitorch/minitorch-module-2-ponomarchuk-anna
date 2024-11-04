@@ -143,6 +143,9 @@ class Tensor:
             c = b
         return c
 
+    def __hash__(self):
+        return hash(self.unique_id)
+
     # Functions
     def __add__(self, b: TensorLike) -> Tensor:
         return Add.apply(self, self._ensure_tensor(b))
@@ -204,7 +207,8 @@ class Tensor:
 
     def item(self) -> float:
         assert self.size == 1
-        return self[0]
+        x: float = self._tensor._storage[0]
+        return x
 
     def sum(self, dim: Optional[int] = None) -> Tensor:
         "Compute the sum over dimension `dim`"
@@ -344,13 +348,15 @@ class Tensor:
 
     @property
     def parents(self) -> Iterable[Variable]:
-        assert self.history is not None
-        return self.history.inputs
+        if self.history is None:
+            return []
+        else:
+            return self.history.inputs
 
     def chain_rule(self, d_output: Any) -> Iterable[Tuple[Variable, Any]]:
         h = self.history
-        assert h is not None
-        assert h.last_fn is not None
+        if h is None or h.last_fn is None:
+            return []
         assert h.ctx is not None
 
         x = h.last_fn._backward(h.ctx, d_output)
